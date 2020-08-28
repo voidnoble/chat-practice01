@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SocketIO Chat</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+  </head>
+  <body>
+    <div class="lobby container">
+      <div class="jumbotron jumbotron-fluid">
+        <div class="container">
+          <h1 class="display-4">대기실</h1>
+          <p class="lead">이곳은 대기실</p>
+        </div>
+      </div>
+      <h3>랜덤챗</h3>
+      <button id="btnRequestRandomChat" class="btn btn-outline-primary">랜덤채팅입장</button>
+      <hr />
+      <h3>대기원</h3>
+      <ul class="peoples list-group list-group-horizontal">
+        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <div class="card" style="width: 18rem">
+            <img src="images/people_avatar_boy.png" class="card-img-top" alt="boy" />
+            <div class="card-body">
+              <h5 class="card-title">Jhon Doe</h5>
+              <p class="card-text">서울 사는 남자</p>
+              <a href="#" class="btn btn-primary">1:1 대화</a>
+            </div>
+          </div>
+        </li>
+        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <div class="card" style="width: 18rem">
+            <img src="images/people_avatar_girl.png" class="card-img-top" alt="girl" />
+            <div class="card-body">
+              <h5 class="card-title">Jane Doe</h5>
+              <p class="card-text">서울 사는 여자</p>
+              <a href="#" class="btn btn-primary">1:1 대화</a>
+            </div>
+          </div>
+        </li>
+      </ul>
+      <hr />
+      <h3>대화방</h3>
+      <ul class="rooms list-group list-group-horizontal">
+        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-id="1">
+          방1
+          <span class="badge badge-primary badge-pill">14</span>
+        </li>
+        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-id="2">
+          방2
+          <span class="badge badge-primary badge-pill">2</span>
+        </li>
+        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-id="3">
+          방3
+          <span class="badge badge-primary badge-pill">1</span>
+        </li>
+        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-id="4">
+          방4
+          <span class="badge badge-primary badge-pill">3</span>
+        </li>
+        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-id="5">
+          방5
+          <span class="badge badge-primary badge-pill">5</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="wait container" style="display: none">
+      <div>상대방을 기다리는중...</div>
+      <button id="btnCancelRequest" class="btn btn-outline-warning">취소</button>
+    </div>
+
+    <div class="chat container" style="display: none">
+      <h2>
+        <div class="room-id-wrapper">
+          Room ID: <span class="room-id"></span>
+          <button id="leaveRoom" class="btn btn-outline-info">방 나가기</button>
+        </div>
+        <div class="socket-id-wrapper">Socket ID: <span class="socket-id"></span></div>
+      </h2>
+
+      <input type="text" name="inputMessage" id="inputMessage" class="input-medium search-query" />
+      <button type="submit" id="btnChat" class="btn btn-outline-primary">전송</button>
+
+      <ul class="chatResult"></ul>
+    </div>
+
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+
+      $(document).ready(function () {
+        socket.on("connected", () => {
+          console.log("connected");
+        });
+
+        // 매칭되었을때
+        socket.on("completeMatch", (data) => {
+          console.log("completeMatch", data);
+
+          $(".lobby").hide();
+          $(".wait").hide();
+          $(".chat").show();
+
+          $(".room-id").text(data.roomId || "undefined");
+          $(".socket-id").text(socket.id);
+        });
+
+        socket.on("joinedRoom", (data) => {
+          $(".lobby").hide();
+          $(".wait").hide();
+          $(".chat").show();
+
+          $(".room-id").text(data.roomId || "undefined");
+          $(".socket-id").text(socket.id);
+        });
+
+        // 대화를 받았을 때
+        socket.on("receiveMessage", (data) => {
+          console.log("receiveMessage");
+
+          $(".chatResult").append("<li>" + data.message + "</li>");
+        });
+
+        // 상대방이 나가면 함께 로비로 나감
+        socket.on("disconnect", (data) => {
+          console.log("disconnect", data);
+
+          $(".lobby").show();
+          $(".chat").hide();
+          $(".chatResult").html("");
+        });
+
+        // 랜덤챗 요청시
+        $("#btnRequestRandomChat").on("click", () => {
+          $(".lobby").hide();
+          $(".chat").show();
+
+          socket.emit("requestRandomChat");
+        });
+
+        // 랜덤챗 요청 취소시
+        $("#btnCancelRequest").on("click", () => {
+          $(".lobby").show();
+          $(".wait").hide();
+          $(".chat").hide();
+
+          socket.emit("cancelRequest");
+        });
+
+        // Join room
+        $(".rooms").on("click", "li", (evt) => {
+          const roomId = $(evt.target).data("id");
+          if (!roomId) {
+            alert("방 아이디 조회 오류!");
+            return;
+          }
+
+          socket.emit("joinRoom", roomId);
+        });
+
+        // 메세지 엔터 입력시
+        $("#inputMessage").on("keyup", (evt) => {
+          if (evt.keyCode == 13) {
+            send();
+          }
+        });
+
+        // 채팅 내용 전송시
+        $("#btnChat").on("click", () => {
+          send();
+        });
+
+        // 방 나가기
+        $("#leaveRoom").on("click", () => {
+          socket.emit("leaveRoom", {
+            roomId: $(".room-id").text(),
+            socketId: socket.id,
+          });
+        });
+
+        function send() {
+          let msg = $("#inputMessage").val();
+          if (msg.length < 1) {
+            alert("내용을 입력하세요");
+            return;
+          }
+
+          socket.emit("sendMessage", { message: msg });
+
+          $("#inputMessage").val("");
+        }
+      });
+    </script>
+  </body>
+</html>
