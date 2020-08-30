@@ -25,7 +25,7 @@
             <div class="card-body">
               <h5 class="card-title">Jhon Doe</h5>
               <p class="card-text">서울 사는 남자</p>
-              <a href="#" class="btn btn-primary">1:1 대화</a>
+              <a href="javascript:void(0)" class="btn btn-primary btn-one-to-one-chat-with" data-id="boy1">1:1 대화</a>
             </div>
           </div>
         </li>
@@ -35,7 +35,7 @@
             <div class="card-body">
               <h5 class="card-title">Jane Doe</h5>
               <p class="card-text">서울 사는 여자</p>
-              <a href="#" class="btn btn-primary">1:1 대화</a>
+              <a href="javascript:void(0)" class="btn btn-primary btn-one-to-one-chat-with" data-id="girl1">1:1 대화</a>
             </div>
           </div>
         </li>
@@ -93,105 +93,123 @@
       var socket = io();
 
       $(document).ready(function () {
-        socket.on("connected", () => {
-          console.log("connected");
+        socket.on('connected', () => {
+          console.log('connected');
         });
 
         // 매칭되었을때
-        socket.on("completeMatch", (data) => {
-          console.log("completeMatch", data);
+        socket.on('completeMatch', (data) => {
+          console.log('completeMatch', data);
 
-          $(".lobby").hide();
-          $(".wait").hide();
-          $(".chat").show();
+          $('.lobby').hide();
+          $('.wait').hide();
+          $('.chat').show();
 
-          $(".room-id").text(data.roomId || "undefined");
-          $(".socket-id").text(socket.id);
+          $('.room-id').text(data.roomId || 'undefined');
+          $('.socket-id').text(socket.id);
         });
 
-        socket.on("joinedRoom", (data) => {
-          $(".lobby").hide();
-          $(".wait").hide();
-          $(".chat").show();
+        socket.on('joinedRoom', (data) => {
+          $('.lobby').hide();
+          $('.wait').hide();
+          $('.chat').show();
 
-          $(".room-id").text(data.roomId || "undefined");
-          $(".socket-id").text(socket.id);
+          $('.room-id').text(data.roomId || 'undefined');
+          $('.socket-id').text(socket.id);
         });
 
         // 대화를 받았을 때
-        socket.on("receiveMessage", (data) => {
-          console.log("receiveMessage");
+        socket.on('receiveMessage', (data) => {
+          console.log('receiveMessage');
 
-          $(".chatResult").append("<li>" + data.message + "</li>");
+          $('.chatResult').append('<li>' + data.message + '</li>');
         });
 
         // 상대방이 나가면 함께 로비로 나감
-        socket.on("disconnect", (data) => {
-          console.log("disconnect", data);
+        socket.on('disconnect', (data) => {
+          console.log('disconnect', data);
 
-          $(".lobby").show();
-          $(".chat").hide();
-          $(".chatResult").html("");
+          $('.lobby').show();
+          $('.chat').hide();
+          $('.chatResult').html('');
+        });
+
+        // 대화방 정원이 가득 찼을때
+        socket.on('oneToOneChatFull', (data) => {
+          if (data.error) {
+            alert(data.message);
+            return;
+          }
         });
 
         // 랜덤챗 요청시
-        $("#btnRequestRandomChat").on("click", () => {
-          $(".lobby").hide();
-          $(".chat").show();
+        $('#btnRequestRandomChat').on('click', () => {
+          $('.lobby').hide();
+          $('.chat').show();
 
-          socket.emit("requestRandomChat");
+          socket.emit('requestRandomChat');
         });
 
         // 랜덤챗 요청 취소시
-        $("#btnCancelRequest").on("click", () => {
-          $(".lobby").show();
-          $(".wait").hide();
-          $(".chat").hide();
+        $('#btnCancelRequest').on('click', () => {
+          $('.lobby').show();
+          $('.wait').hide();
+          $('.chat').hide();
 
-          socket.emit("cancelRequest");
+          socket.emit('cancelRequest');
         });
 
         // Join room
-        $(".rooms").on("click", "li", (evt) => {
-          const roomId = $(evt.target).data("id");
+        $('.rooms').on('click', 'li', (evt) => {
+          const roomId = $(evt.target).data('id');
           if (!roomId) {
-            alert("방 아이디 조회 오류!");
+            alert('방 아이디 조회 오류!');
             return;
           }
 
-          socket.emit("joinRoom", roomId);
+          socket.emit('joinRoom', roomId);
+        });
+
+        $('.peoples').on('click', '.btn-one-to-one-chat-with', (evt) => {
+          const roomId = $(evt.target).data('id');
+          if (!roomId) {
+            alert('방 아이디 조회 오류!');
+            return;
+          }
+
+          socket.emit('oneToOneChatWith', { roomId: roomId });
         });
 
         // 메세지 엔터 입력시
-        $("#inputMessage").on("keyup", (evt) => {
+        $('#inputMessage').on('keyup', (evt) => {
           if (evt.keyCode == 13) {
             send();
           }
         });
 
         // 채팅 내용 전송시
-        $("#btnChat").on("click", () => {
+        $('#btnChat').on('click', () => {
           send();
         });
 
         // 방 나가기
-        $("#leaveRoom").on("click", () => {
-          socket.emit("leaveRoom", {
-            roomId: $(".room-id").text(),
+        $('#leaveRoom').on('click', () => {
+          socket.emit('leaveRoom', {
+            roomId: $('.room-id').text(),
             socketId: socket.id,
           });
         });
 
         function send() {
-          let msg = $("#inputMessage").val();
+          let msg = $('#inputMessage').val();
           if (msg.length < 1) {
-            alert("내용을 입력하세요");
+            alert('내용을 입력하세요');
             return;
           }
 
-          socket.emit("sendMessage", { message: msg });
+          socket.emit('sendMessage', { message: msg });
 
-          $("#inputMessage").val("");
+          $('#inputMessage').val('');
         }
       });
     </script>
